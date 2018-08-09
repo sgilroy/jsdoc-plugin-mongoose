@@ -55,14 +55,14 @@ The resulting documentation will include top-level schema paths as members of th
 >
 >#### Members
 >
->##### comments :Array.<Object>
+>##### comments :`Array.<Object>`
 >Array of comments, each with a body and date.
 >
->##### date :Date
+>##### date :`Date`
 >
->##### hidden :Boolean
+>##### hidden :`Boolean`
 >
->##### title :String
+>##### title :`String`
 >Title of the blog post which will be used as the header.
 >
 >### Methods
