@@ -1,0 +1,47 @@
+{
+  "name": "jsdoc-plugin-mongoose",
+  "version": "1.0.0",
+  "desciption": "Plugin for JSDoc to automatically generate JSDoc documentation from Mongoose schemas for corresponding models, including data types of fields and contextual descriptions.",
+  "repository": {
+    "url": "git@github.com:sgilroy/jsdoc-plugin-mongoose.git",
+    "type": "git"
+  },
+  "author": "Scott Gilroy <scottjgilroy@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^4.19.1",
+    "eslint-config-prettier": "^2.9.0",
+    "eslint-plugin-prettier": "^2.6.0",
+    "jest": "^23.1.0",
+    "prettier": "^1.13.4"
+  },
+  "scripts": {
+    "test": "npm run lint && jest",
+    "fix": "npm run eslint --fix & npm run prettier --write",
+    "lint": "npm run eslint & wait",
+    "prettier": "prettier -l README.md package.json",
+    "eslint": "eslint ."
+  },
+  "prettier": {
+    "singleQuote": true,
+    "bracketSpacing": false
+  },
+  "eslintConfig": {
+    "extends": [
+      "eslint:recommended",
+      "plugin:prettier/recommended"
+    ],
+    "env": {
+      "node": true,
+      "es6": true,
+      "mocha": true
+    },
+    "parserOptions": {
+      "ecmaVersion": 2017
+    }
+  },
+  "dependencies": {
+    "comment-parser": "^0.5.0",
+    "lodash": "^4.17.10"
+  }
+}
