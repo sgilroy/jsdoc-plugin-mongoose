@@ -166,10 +166,7 @@ exports.astNodeVisitor = {
       }
 
       // fallback to using the leading comment from the node if no JSDoc comment is available
-      const leadingComments = _.get(
-        node,
-        'declarations[0].leadingComments[0].value'
-      );
+      const leadingComments = _.get(node, 'leadingComments[0].value');
       const commentSources = commentParser(
         e.comment || (leadingComments && `/*${leadingComments}*/`) || ''
       ).map(item => item.source);
@@ -180,7 +177,7 @@ exports.astNodeVisitor = {
       const parentSchema = getParentSchema(node);
       if (parentSchema) {
         let fieldType = recursiveGetFieldType(node.value);
-        const commentSources = commentParser(e.comment).map(
+        const commentSources = commentParser(e.comment || '').map(
           item => item.source
         );
         if (parentSchema.nested) {
@@ -214,7 +211,6 @@ exports.astNodeVisitor = {
           } else {
             commentSources.push(`@member ${parentSchema.path}`);
           }
-          commentSources.push('');
           addComment(commentSources);
         }
       }
@@ -228,6 +224,7 @@ exports.astNodeVisitor = {
       node.left.object.object &&
       node.left.object.object.type === 'Identifier'
     ) {
+      // member (statics or methods) of the schema
       const className = getClassNameFromSchemaName(
         node.left.object.object.name
       );
@@ -257,7 +254,10 @@ exports.astNodeVisitor = {
         !findCommentWithTag(commentItems, 'function') &&
         !findCommentWithTag(commentItems, 'member')
       ) {
-        if (node.right.type === 'FunctionExpression') {
+        if (
+          node.right.type === 'FunctionExpression' ||
+          node.right.type === 'ArrowFunctionExpression'
+        ) {
           commentSources.push(`@function ${node.left.property.name}`);
         } else {
           commentSources.push(`@member ${node.left.property.name}`);

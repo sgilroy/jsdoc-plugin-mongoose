@@ -12,12 +12,14 @@
     "eslint": "^4.19.1",
     "eslint-config-prettier": "^2.9.0",
     "eslint-plugin-prettier": "^2.6.0",
-    "jest": "^23.1.0",
+    "jest": "^23.4.2",
+    "jsdoc": "^3.5.5",
+    "jsdoc-x": "^3.0.0",
     "prettier": "^1.13.4"
   },
   "scripts": {
-    "test": "npm run lint && jest",
-    "fix": "npm run eslint --fix & npm run prettier --write",
+    "test": "npm run lint && NODE_PATH=./node_modules/jsdoc/lib jest",
+    "fix": "npm run eslint -- --fix & npm run prettier -- --write",
     "lint": "npm run eslint & wait",
     "prettier": "prettier -l README.md package.json",
     "eslint": "eslint ."
@@ -34,11 +36,14 @@
     "env": {
       "node": true,
       "es6": true,
-      "mocha": true
+      "jest": true
     },
     "parserOptions": {
       "ecmaVersion": 2017
     }
+  },
+  "jest": {
+    "testURL": "http://localhost/"
   },
   "dependencies": {
     "comment-parser": "^0.5.0",

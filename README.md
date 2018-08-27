@@ -21,12 +21,12 @@ const BlogSchema = new mongoose.Schema({
   /**
    * Title of the blog post which will be used as the header.
    */
-  title:  String,
+  title: String,
   /**
    * Array of comments, each with a body and date.
    */
-  comments: [{ body: String, date: Date }],
-  date: { type: Date, default: Date.now },
+  comments: [{body: String, date: Date}],
+  date: {type: Date, default: Date.now},
   hidden: Boolean
 });
 
@@ -34,43 +34,49 @@ const BlogSchema = new mongoose.Schema({
  * Adds a comment to a blog post.
  * @param {String} body The body of the comment
  */
-BlogSchema.methods.addComment = function(body) {
-};
+BlogSchema.methods.addComment = function(body) {};
 
 /**
  * Finds blog posts from today.
  */
-BlogSchema.statics.findCurrentBlogPosts = function() {
-};
+BlogSchema.statics.findCurrentBlogPosts = function() {};
 
 module.exports = mongoose.model('Blog', BlogSchema);
 ```
 
 The resulting documentation will include top-level schema paths as members of the inferred class:
->### Class: Blog
->Blog post
+
+> ### Class: Blog
 >
->#### Extends
+> Blog post
+>
+> #### Extends
+>
 > mongoose.Model
 >
->#### Members
+> #### Members
 >
->##### comments :`Array.<Object>`
->Array of comments, each with a body and date.
+> ##### comments :`Array.<Object>`
 >
->##### date :`Date`
+> Array of comments, each with a body and date.
 >
->##### hidden :`Boolean`
+> ##### date :`Date`
 >
->##### title :`String`
->Title of the blog post which will be used as the header.
+> ##### hidden :`Boolean`
 >
->### Methods
->##### <static> findCurrentBlogPosts()
->Finds blog posts from today.
+> ##### title :`String`
 >
->##### addComment(body)
->Adds a comment to a blog post.
+> Title of the blog post which will be used as the header.
+>
+> ### Methods
+>
+> ##### <static> findCurrentBlogPosts()
+>
+> Finds blog posts from today.
+>
+> ##### addComment(body)
+>
+> Adds a comment to a blog post.
 
 ### Usage
 
@@ -79,16 +85,16 @@ Uses of `new mongoose.Schema` in your code will be detected and result in docume
 generated for the corresponding model and its members (see example above).
 
 1. Install this plugin globally or as a dev dependency, or copy it to the `plugins` folder located in the JSDoc installation folder.
-    ```bash
-    $ git clone https://github.com/sgilroy/jsdoc-plugin-mongoose
-    ```                                                                      
+   ```bash
+   $ git clone https://github.com/sgilroy/jsdoc-plugin-mongoose
+   ```
 2. Include the plugin in your jsdoc-conf.js file. If the plugin is not installed in the `plugins` folder, specify a relative or absolute path to the plugin.
-    ```js
-    module.exports = {
-        plugins: ['plugins/jsdoc-plugin-mongoose']
-    }
-    ```                                                                      
+   ```js
+   module.exports = {
+     plugins: ['plugins/jsdoc-plugin-mongoose']
+   };
+   ```
 3. Run JSDoc from the command line and pass the configuration file to it.
-    ```bash
-    $ jsdoc -c jsdoc-conf.js
-    ```
+   ```bash
+   $ jsdoc -c jsdoc-conf.js
+   ```
