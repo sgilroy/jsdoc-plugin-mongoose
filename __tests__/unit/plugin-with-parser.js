@@ -50,6 +50,9 @@ function visitNode(program, nodePath) {
   parser._walkAst(ast, parser._visitor, sourceName);
   const node = _.get(ast, 'program.body[0].expression.body.' + nodePath);
 
+  // make sure the specified nodePath is valid before proceeding
+  expect(node).toBeDefined();
+
   plugin.astNodeVisitor.visitNode(node, event);
 
   return event;
@@ -142,6 +145,29 @@ describe('with mongoose.Schema', function() {
       `Finds blog posts from today.
 @memberof Blog
 @function findCurrentBlogPosts`
+    );
+  });
+});
+
+describe('@schemaof', function() {
+  it('should add member documentation to schema path', async () => {
+    const event = visitNode(() => {
+      /**
+       * @schemaof Blog
+       */
+      module.exports = {
+        /**
+         * Title of the blog post which will be used as the header.
+         */
+        title: String
+      };
+    }, 'body[0].expression.right.properties[0]');
+
+    expect(event).toHaveProperty(
+      'comment',
+      `Title of the blog post which will be used as the header.
+@memberof Blog#
+@member {String} title`
     );
   });
 });

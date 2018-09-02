@@ -1,6 +1,19 @@
 const _ = require('lodash');
 const commentParser = require('comment-parser');
 
+function getSchemaOfTag(currentNode) {
+  const leadingComments = _.get(currentNode, 'leadingComments[0].value');
+  const parsed = commentParser(
+    (leadingComments && `/*${leadingComments}*/`) || ''
+  );
+  const schemaOfComment = findCommentWithTag(parsed, 'schemaof');
+  if (!schemaOfComment) {
+    return;
+  }
+  const schemaOfTag = _.find(schemaOfComment.tags, {tag: 'schemaof'});
+  return schemaOfTag.name;
+}
+
 function getParentSchema(node) {
   if (
     node.parent &&
@@ -18,6 +31,14 @@ function getParentSchema(node) {
         }
         return {
           className,
+          path: pathItems.join('.'),
+          memberNode: currentNode,
+          nested
+        };
+      } else if (getSchemaOfTag(currentNode)) {
+        const schemaOf = getSchemaOfTag(currentNode);
+        return {
+          className: schemaOf,
           path: pathItems.join('.'),
           memberNode: currentNode,
           nested

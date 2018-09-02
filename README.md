@@ -98,3 +98,35 @@ generated for the corresponding model and its members (see example above).
    ```bash
    $ jsdoc -c jsdoc-conf.js
    ```
+
+### Using @schemaof
+
+The plugin will generally infer that properties are part of a mongoose schema and thus associate them with the
+appropriate class automatically if the property is defined directly as a child of a schema declaration. For example:
+
+```js
+const BlogSchema = new mongoose.Schema({
+  /**
+   * Title of the blog post which will be used as the header.
+   */
+  title: String
+});
+```
+
+Here the `title` is inferred to be a member of the `Blog` class by being part of the BlogSchema declaration. However,
+you may want to define some or all of the schema properties separately from creating the schema. In such cases, the
+@schemaof tag should be used to tell the plugin to treat the properties as part of a mongoose schema definition. For
+example:
+
+```js
+/**
+ * @schemaof Blog
+ */
+const blogSchemaObject = {
+  /**
+   * Title of the blog post which will be used as the header.
+   */
+  title: String
+};
+const BlogSchema = new mongoose.Schema(blogSchemaObject);
+```
