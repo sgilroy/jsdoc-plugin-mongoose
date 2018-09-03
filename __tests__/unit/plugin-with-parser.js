@@ -39,11 +39,12 @@ const sourceName = 'fake.js';
 function visitNode(program, nodePath) {
   const source = program.toString();
   const ast = parser._astBuilder.build(source, sourceName);
+  const events = [];
   let event = {};
 
   // find any existing jsdoc comment
   parser.on('jsdocCommentFound', _event => {
-    event = _event;
+    events.push(_event);
   });
 
   // walk the AST to set the parent of each node
@@ -53,6 +54,12 @@ function visitNode(program, nodePath) {
   // make sure the specified nodePath is valid before proceeding
   expect(node).toBeDefined();
 
+  // only include the event if its on on before the line of the node
+  for (let _event of events) {
+    if (_event.lineno <= node.loc.start.line) {
+      event = _event;
+    }
+  }
   plugin.astNodeVisitor.visitNode(node, event);
 
   return event;
@@ -103,6 +110,142 @@ describe('with mongoose.Schema', function() {
       `Title of the blog post which will be used as the header.
 @memberof Blog#
 @member {String} title`
+    );
+  });
+
+  it('should include description and type for nested schema property', async () => {
+    const event = visitNode(() => {
+      const mongoose = require('mongoose');
+
+      const BlogSchema = new mongoose.Schema({
+        author: {
+          /**
+           * Name of the author
+           */
+          name: String,
+          image: String
+        }
+      });
+      mongoose.model('Blog', BlogSchema);
+    }, 'body[1].declarations[0].init.arguments[0].properties[0]');
+
+    expect(event).toHaveProperty(
+      'comment',
+      `@memberof Blog#
+@member {Object} author
+@property {String} name Name of the author
+@property {String} image `
+    );
+  });
+
+  it('should include description and type for schema property nested in type object', async () => {
+    const event = visitNode(() => {
+      const mongoose = require('mongoose');
+
+      const BlogSchema = new mongoose.Schema({
+        author: {
+          select: false,
+          type: {
+            /**
+             * Name of the author
+             */
+            name: String,
+            image: String
+          }
+        }
+      });
+      mongoose.model('Blog', BlogSchema);
+    }, 'body[1].declarations[0].init.arguments[0].properties[0]');
+
+    expect(event).toHaveProperty(
+      'comment',
+      `@memberof Blog#
+@member {Object} author
+@property {String} name Name of the author
+@property {String} image `
+    );
+  });
+
+  it('should include description and type for nested array schema property', async () => {
+    const event = visitNode(() => {
+      const mongoose = require('mongoose');
+
+      const BlogSchema = new mongoose.Schema({
+        comments: [
+          {
+            /**
+             * Body of the comment
+             */
+            body: String,
+            author: String
+          }
+        ]
+      });
+      mongoose.model('Blog', BlogSchema);
+    }, 'body[1].declarations[0].init.arguments[0].properties[0]');
+
+    expect(event).toHaveProperty(
+      'comment',
+      `@memberof Blog#
+@member {Array<Object>} comments
+@property {String} body Body of the comment
+@property {String} author `
+    );
+  });
+
+  it('should include description and type for deeply nested schema property', async () => {
+    const event = visitNode(() => {
+      const mongoose = require('mongoose');
+
+      const BlogSchema = new mongoose.Schema({
+        author: {
+          image: {
+            /**
+             * Size of the image
+             */
+            size: String
+          }
+        }
+      });
+      mongoose.model('Blog', BlogSchema);
+    }, 'body[1].declarations[0].init.arguments[0].properties[0]');
+
+    expect(event).toHaveProperty(
+      'comment',
+      `@memberof Blog#
+@member {Object} author
+@property {Object} image 
+@property {String} image.size Size of the image`
+    );
+  });
+
+  it('should include description and type for deeply nested array schema property', async () => {
+    const event = visitNode(() => {
+      const mongoose = require('mongoose');
+
+      const BlogSchema = new mongoose.Schema({
+        comments: [
+          {
+            replies: [
+              {
+                /**
+                 * Body of the reply to the comment
+                 */
+                body: String
+              }
+            ]
+          }
+        ]
+      });
+      mongoose.model('Blog', BlogSchema);
+    }, 'body[1].declarations[0].init.arguments[0].properties[0]');
+
+    expect(event).toHaveProperty(
+      'comment',
+      `@memberof Blog#
+@member {Array<Object>} comments
+@property {Array<Object>} replies 
+@property {String} replies.body Body of the reply to the comment`
     );
   });
 

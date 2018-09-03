@@ -1,11 +1,13 @@
 const _ = require('lodash');
 const commentParser = require('comment-parser');
 
-function getSchemaOfTag(currentNode) {
+function parseLeadingComments(currentNode) {
   const leadingComments = _.get(currentNode, 'leadingComments[0].value');
-  const parsed = commentParser(
-    (leadingComments && `/*${leadingComments}*/`) || ''
-  );
+  return commentParser((leadingComments && `/*${leadingComments}*/`) || '');
+}
+
+function getSchemaOfTag(currentNode) {
+  const parsed = parseLeadingComments(currentNode);
   const schemaOfComment = findCommentWithTag(parsed, 'schemaof');
   if (!schemaOfComment) {
     return;
@@ -20,41 +22,24 @@ function getParentSchema(node) {
     node.parent.type === 'ObjectExpression' &&
     node.parent.parent
   ) {
-    let pathItems = [node.key.name];
-    let currentNode = node.parent.parent;
-    let nested = false;
-    while (currentNode) {
-      if (isNewSchemaExpression(currentNode)) {
-        const className = getSchemaClassName(currentNode);
-        if (!className) {
-          return;
-        }
-        return {
-          className,
-          path: pathItems.join('.'),
-          memberNode: currentNode,
-          nested
-        };
-      } else if (getSchemaOfTag(currentNode)) {
-        const schemaOf = getSchemaOfTag(currentNode);
-        return {
-          className: schemaOf,
-          path: pathItems.join('.'),
-          memberNode: currentNode,
-          nested
-        };
-      } else if (
-        currentNode.type === 'Property' &&
-        currentNode.parent &&
-        currentNode.parent.type === 'ObjectExpression' &&
-        currentNode.parent.parent
-      ) {
-        nested = true;
-        pathItems.unshift(currentNode.key.name);
-        currentNode = currentNode.parent.parent;
-      } else {
-        currentNode = undefined;
+    const memberNode = node.parent.parent;
+    if (isNewSchemaExpression(memberNode)) {
+      const className = getSchemaClassName(memberNode);
+      if (!className) {
+        return;
       }
+      return {
+        className,
+        path: node.key.name,
+        memberNode
+      };
+    } else if (getSchemaOfTag(memberNode)) {
+      const schemaOf = getSchemaOfTag(memberNode);
+      return {
+        className: schemaOf,
+        path: node.key.name,
+        memberNode
+      };
     }
   }
 }
@@ -169,6 +154,53 @@ function findCommentWithTag(commentItems, tag) {
   return _.find(commentItems, item => _.find(item.tags, {tag: tag}));
 }
 
+function getNestedProperties(node, propertiesAccumulator, parentPath) {
+  if (!node || !node.properties) {
+    return;
+  }
+
+  const optionsSpecified = _.find(
+    node.properties,
+    property =>
+      _.get(property, 'key.name') === 'type' &&
+      property.value.type === 'ObjectExpression'
+  );
+  const typeProperties = optionsSpecified
+    ? optionsSpecified.value.properties
+    : node.properties;
+
+  // iterate over properties of the node, adding each mongoose property to the properties array
+  for (let propertyNode of typeProperties) {
+    if (!(propertyNode.type === 'Property' && propertyNode.value)) {
+      continue;
+    }
+    const fieldType = recursiveGetFieldType(propertyNode.value);
+    if (!fieldType) {
+      continue;
+    }
+    const name = propertyNode.key.name;
+    const parsed = parseLeadingComments(propertyNode);
+    const description = parsed
+      .map(parsedItem => parsedItem.description)
+      .join('\n');
+    const path = parentPath ? parentPath + '.' + name : name;
+    propertiesAccumulator.push({
+      path,
+      fieldType,
+      description
+    });
+    if (fieldType === 'Object') {
+      getNestedProperties(propertyNode.value, propertiesAccumulator, path);
+    } else if (fieldType === 'Array<Object>') {
+      getNestedProperties(
+        _.get(propertyNode, 'value.elements[0]'),
+        propertiesAccumulator,
+        path
+      );
+    }
+  }
+}
+
 exports.astNodeVisitor = {
   visitNode: function(node, e, parser, currentSourceName) {
     const schemaVariableDeclaration = isSchemaVariableDeclaration(node);
@@ -201,39 +233,31 @@ exports.astNodeVisitor = {
         const commentSources = commentParser(e.comment || '').map(
           item => item.source
         );
-        if (parentSchema.nested) {
-          // nested node is a property of a member of a mongoose schema, so move the comment to be a @property
-          delete e.comment;
-          delete e.event;
-          let memberCommentItems = commentParser(
-            parentSchema.memberNode.comment || ''
-          );
-          const memberCommentSources = memberCommentItems.map(
-            item => item.source
-          );
-          if (
-            !_.find(memberCommentItems, item =>
-              _.find(item.tags, {tag: 'property'})
-            )
-          ) {
-            memberCommentSources.push(
-              `@property {${fieldType}} ${
-                parentSchema.path
-              } ${commentSources.join(' ')}`
-            );
-            parentSchema.memberNode.comment = memberCommentSources.join('\n');
-          }
-        } else {
-          if (parentSchema.className) {
-            commentSources.push(`@memberof ${parentSchema.className}#`);
-          }
-          if (fieldType) {
-            commentSources.push(`@member {${fieldType}} ${parentSchema.path}`);
-          } else {
-            commentSources.push(`@member ${parentSchema.path}`);
-          }
-          addComment(commentSources);
+
+        if (parentSchema.className) {
+          commentSources.push(`@memberof ${parentSchema.className}#`);
         }
+        if (fieldType) {
+          commentSources.push(`@member {${fieldType}} ${parentSchema.path}`);
+        } else {
+          commentSources.push(`@member ${parentSchema.path}`);
+        }
+
+        const properties = [];
+        if (fieldType === 'Object') {
+          getNestedProperties(node.value, properties);
+        } else if (fieldType === 'Array<Object>') {
+          getNestedProperties(_.get(node, 'value.elements[0]'), properties);
+        }
+        properties.forEach(property =>
+          commentSources.push(
+            `@property {${property.fieldType}} ${property.path} ${
+              property.description
+            }`
+          )
+        );
+
+        addComment(commentSources);
       }
     } else if (
       node.type === 'AssignmentExpression' &&
